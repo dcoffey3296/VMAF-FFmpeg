@@ -6,16 +6,25 @@ ENV TZ=UTC
 
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN apt-get install -y python3 python3-pip python3-setuptools python3-wheel ninja-build doxygen nasm && pip3 install --user meson
+
+## libfdk-aac-dev
+RUN apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 3B4FE6ACC0B21F32
+RUN echo "deb http://us.archive.ubuntu.com/ubuntu trusty main multiverse\n" >> /etc/apt/sources.list && cat /etc/apt/sources.list
+RUN apt-get update && apt-get install -y libfdk-aac-dev
+
+## python / vmaf setup
+RUN apt-get update && apt-get install -y python3 python3-pip python3-setuptools python3-wheel ninja-build doxygen nasm && pip3 install --user meson
 RUN pip3 install --upgrade pip
 RUN pip3 install numpy scipy matplotlib notebook pandas sympy nose scikit-learn scikit-image h5py sureal
 
+## install vmaf
 RUN git clone --depth 1 https://github.com/Netflix/vmaf.git vmaf 
-
 ENV PATH="${PATH}:/root/.local/bin"
-
 RUN cd vmaf/libvmaf && meson build --buildtype release && ninja -vC build && ninja -vC build install
+RUN mkdir -p /usr/local/share/model && cp -r /workdir/vmaf/model /usr/local/share
 
+
+## install ffmpeg
 RUN cd && \
 apt-get -y install \
 autoconf \
@@ -44,7 +53,9 @@ RUN apt-get install yasm
 RUN apt-get install libx264-dev -y
 RUN apt-get install libx265-dev libnuma-dev -y
 RUN apt-get install libvpx-dev -y
-RUN apt-get install libfdk-aac-dev -y
+
+# done earlier, special handling RUN apt-get install libfdk-aac-dev -y
+
 RUN apt-get install libmp3lame-dev -y
 RUN apt-get install libopus-dev -y
 RUN apt install ocl-icd-opencl-dev -y
